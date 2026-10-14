@@ -14,27 +14,28 @@ from aiogram.types import (
     Message,
 )
 
-# Токен берется из настроек Render (Environment Variables)
-TOKEN = os.getenv("TOKEN")
+# Твой токен от BotFather
+TOKEN = "ТВОЙ_ТОКЕН_ОТ_БОТФАТЕРА"
 
 router = Router()
 
 
-# Состояния для воронки
+# Состояния воронки
 class BotStates(StatesGroup):
   choosing_game = State()
   choosing_prize = State()
-  waiting_for_screenshot = State()
+  task_one = State()
+  task_two = State()
   checking_subs = State()
 
 
-# 1. Команда /start
+# 1. Стартовое сообщение (/start)
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
   text = (
-      "✨ **Что умеет этот бот?**\n\n"
-      "✦ В этом боте вы можете получить звёзды или другие бонусы на выбор.\n\n"
-      "✦ Нажмите кнопку ниже, чтобы испытать удачу!"
+      "Что умеет этот бот?\n\n"
+      "✦ В этом боте вы можете получить звёзды или NFT на выбор.\n\n"
+      "✦ Нажмите /start и следуйте инструкциям, которые отправит бот."
   )
   keyboard = InlineKeyboardMarkup(
       inline_keyboard=[
@@ -48,11 +49,11 @@ async def cmd_start(message: Message, state: FSMContext):
           ]
       ]
   )
-  await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+  await message.answer(text, reply_markup=keyboard)
   await state.set_state(BotStates.choosing_game)
 
 
-# 2. Выбор игры
+# 2. Игра (Кубик/Мяч)
 @router.callback_query(
     BotStates.choosing_game, F.data.startswith("game_")
 )
@@ -65,9 +66,7 @@ async def process_game(callback: CallbackQuery, state: FSMContext):
   keyboard = InlineKeyboardMarkup(
       inline_keyboard=[
           [
-              InlineKeyboardButton(
-                  text="🎁 Бонус А", callback_data="prize_a"
-              ),
+              InlineKeyboardButton(text="🎁 NFT", callback_data="prize_nft"),
               InlineKeyboardButton(
                   text="⭐ Звёзды", callback_data="prize_stars"
               ),
@@ -75,31 +74,62 @@ async def process_game(callback: CallbackQuery, state: FSMContext):
       ]
   )
   await callback.message.answer(
-      "🎉 **Поздравляю! Вы попали!**\n\nВыберите, какой приз хотите получить 👇",
+      "Поздравляю! Вы попали!\n\nВыберите, какой приз хотите получить 👇",
       reply_markup=keyboard,
-      parse_mode="Markdown",
   )
   await state.set_state(BotStates.choosing_prize)
 
 
-# 3. Выбор приза
+# 3. Выбор приза -> Показываем кнопку «Посмотреть NFT» и Задание 1
 @router.callback_query(
     BotStates.choosing_prize, F.data.startswith("prize_")
 )
 async def process_prize(callback: CallbackQuery, state: FSMContext):
-  text = (
-      "Чтобы забрать приз:\n\n"
-      "1. Оставьте комментарий под нашим видео.\n"
-      "2. Отправьте **1 скриншот** подтверждения боту 📸"
+  # Кнопка для просмотра NFT по твоей ссылке
+  keyboard = InlineKeyboardMarkup(
+      inline_keyboard=[
+          [
+              InlineKeyboardButton(
+                  text="Посмотреть NFT",
+                  url="https://t.me/nft/StellarRocket-131674",
+              )
+          ]
+      ]
   )
-  await callback.message.edit_text(text)
-  await state.set_state(BotStates.waiting_for_screenshot)
+
+  await callback.message.answer(
+      "Вам выпал нфт, который вы можете посмотреть по кнопке Посмотреть НФТ",
+      reply_markup=keyboard,
+  )
+
+  text = (
+      "Чтобы забрать приз:\n"
+      "1. ❤️ Лайк на комментарий, с которого узнали о боте\n"
+      "2. 💬 Ответьте на этот комментарий: «рил сработала офигеть»\n\n"
+      "📸 Отправьте 1 скриншот боту выполненного задания"
+  )
+  await callback.message.answer(text)
+  await state.set_state(BotStates.task_one)
 
 
-# 4. Получение скриншота
-@router.message(BotStates.waiting_for_screenshot, F.photo)
-async def process_screenshot(message: Message, state: FSMContext):
-  await message.answer("✅ **Все изображения приняты!**\n\nПодбираю задания...")
+# Получение 1-го скриншота -> Переход к Заданию 2
+@router.message(BotStates.task_one, F.photo)
+async def process_first_screenshot(message: Message, state: FSMContext):
+  text = (
+      "Задание 2\n\n"
+      "Оставьте 5 комментариев под видео о подарках или звёздах в TikTok.\n"
+      "Текст: `@bypobot спс за NFT`\n\n"
+      "❤️ Поставьте лайк каждому комментарию.\n"
+      "📸 Отправьте боту 5 скриншотов."
+  )
+  await message.answer(text)
+  await state.set_state(BotStates.task_two)
+
+
+# Получение скриншотов задания 2 -> Финальный этап со спонсорами
+@router.message(BotStates.task_two, F.photo)
+async def process_second_screenshots(message: Message, state: FSMContext):
+  await message.answer("Все изображения приняты!\nПодбираю задания...")
   await asyncio.sleep(2)
 
   keyboard = InlineKeyboardMarkup(
@@ -111,16 +141,15 @@ async def process_screenshot(message: Message, state: FSMContext):
           ],
           [
               InlineKeyboardButton(
-                  text="✅ Проверить подписку", callback_data="check_subs"
+                  text="✅ Проверить", callback_data="check_subs"
               )
           ],
       ]
   )
   await message.answer(
-      "📢 **Подпишитесь на каналы спонсоров.**\n\n"
-      "После подписки нажмите кнопку «Проверить» 👇",
+      "Отлично! Осталось выполнить задания спонсоров.\n\n"
+      "После подписки нажмите кнопку\n✅ Проверить",
       reply_markup=keyboard,
-      parse_mode="Markdown",
   )
   await state.set_state(BotStates.checking_subs)
 
@@ -128,12 +157,12 @@ async def process_screenshot(message: Message, state: FSMContext):
 @router.callback_query(BotStates.checking_subs, F.data == "check_subs")
 async def final_check(callback: CallbackQuery):
   await callback.answer(
-      "✅ Подписка подтверждена!",
+      "✅ Подписка проверена!",
       show_alert=True,
   )
 
 
-# Запуск простейшего веб-сервера для Render (чтобы Web Service не падал)
+# Веб-сервер для удержания Render
 def run_web_server():
   port = int(os.environ.get("PORT", 10000))
   handler = http.server.SimpleHTTPRequestHandler
@@ -142,7 +171,6 @@ def run_web_server():
 
 
 async def main():
-  # Запускаем веб-сервер в отдельном потоке
   server_thread = threading.Thread(target=run_web_server, daemon=True)
   server_thread.start()
 
@@ -155,4 +183,3 @@ async def main():
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)
   asyncio.run(main())
-
