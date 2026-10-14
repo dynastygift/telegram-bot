@@ -14,8 +14,8 @@ from aiogram.types import (
     Message,
 )
 
-# Твой токен от BotFather
-TOKEN = "ТВОЙ_ТОКЕН_ОТ_БОТФАТЕРА"
+# Твой токен встроен
+TOKEN = "8654427408:AAFwlzh0EaKmJkmtZsQ-ZhERHtXqKd8725c"
 
 router = Router()
 
@@ -33,33 +33,37 @@ class BotStates(StatesGroup):
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
   text = (
-      "Что умеет этот бот?\n\n"
-      "✦ В этом боте вы можете получить звёзды или NFT на выбор.\n\n"
-      "✦ Нажмите /start и следуйте инструкциям, которые отправит бот."
+      "Испытайте удачу!\n\n"
+      ">Выберите, бросите мяч в кольцо или дротик в цель чтобы получить приз 🏀🎯"
   )
   keyboard = InlineKeyboardMarkup(
       inline_keyboard=[
           [
               InlineKeyboardButton(
-                  text="⚽ Удар по воротам", callback_data="game_football"
+                  text="🏀 Бросок в кольцо", callback_data="game_basketball"
               ),
               InlineKeyboardButton(
-                  text="🏀 Бросок в кольцо", callback_data="game_basketball"
+                  text="🎯 Бросок в цель", callback_data="game_darts"
               ),
           ]
       ]
   )
-  await message.answer(text, reply_markup=keyboard)
+  await message.answer_photo(
+      photo="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+      caption=text,
+      reply_markup=keyboard,
+      parse_mode="Markdown",
+  )
   await state.set_state(BotStates.choosing_game)
 
 
-# 2. Игра (Кубик/Мяч)
+# 2. Игра (Бросок)
 @router.callback_query(
     BotStates.choosing_game, F.data.startswith("game_")
 )
 async def process_game(callback: CallbackQuery, state: FSMContext):
   await callback.message.delete()
-  dice_emoji = "⚽" if "football" in callback.data else "🏀"
+  dice_emoji = "🏀" if "basketball" in callback.data else "🎯"
   await callback.message.answer_dice(emoji=dice_emoji)
   await asyncio.sleep(4)
 
@@ -73,96 +77,125 @@ async def process_game(callback: CallbackQuery, state: FSMContext):
           ]
       ]
   )
-  await callback.message.answer(
-      "Поздравляю! Вы попали!\n\nВыберите, какой приз хотите получить 👇",
+
+  text = (
+      "К сожалению, вы промахнулись\n\n"
+      ">Но мы всё равно можем выдать вам приз за простое задание! "
+      "Выберите, что хотите получить"
+  )
+  await callback.message.answer_photo(
+      photo="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+      caption=text,
       reply_markup=keyboard,
+      parse_mode="Markdown",
   )
   await state.set_state(BotStates.choosing_prize)
 
 
-# 3. Выбор приза -> Показываем кнопку «Посмотреть NFT» и Задание 1
+# 3. Выбор приза -> Задание 1 (1 скриншот)
 @router.callback_query(
     BotStates.choosing_prize, F.data.startswith("prize_")
 )
 async def process_prize(callback: CallbackQuery, state: FSMContext):
-  # Кнопка для просмотра NFT по твоей ссылке
+  await callback.message.delete()
+
   keyboard = InlineKeyboardMarkup(
       inline_keyboard=[
           [
               InlineKeyboardButton(
-                  text="Посмотреть NFT",
+                  text="🔍 Посмотреть NFT",
                   url="https://t.me/nft/StellarRocket-131674",
               )
-          ]
+          ],
+          [InlineKeyboardButton(text="🔄 Перекрутить", callback_data="reroll")],
       ]
   )
 
-  await callback.message.answer(
-      "Вам выпал нфт, который вы можете посмотреть по кнопке Посмотреть НФТ",
-      reply_markup=keyboard,
-  )
-
   text = (
-      "Чтобы забрать приз:\n"
-      "1. ❤️ Лайк на комментарий, с которого узнали о боте\n"
-      "2. 💬 Ответьте на этот комментарий: «рил сработала офигеть»\n\n"
-      "📸 Отправьте 1 скриншот боту выполненного задания"
+      "Вам выпал нфт, который вы можете посмотреть по кнопке Посмотреть НФТ\n\n"
+      ">Для получения необходимо поставить лайк на комментарий из TikTok, "
+      "с моим юзом с которого узнали обо мне и написать в ответ на него "
+      "«всё прошло легко»\n\n"
+      "Отправьте боту 1 скриншот боту"
   )
-  await callback.message.answer(text)
+  await callback.message.answer_photo(
+      photo="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+      caption=text,
+      reply_markup=keyboard,
+      parse_mode="Markdown",
+  )
   await state.set_state(BotStates.task_one)
 
 
-# Получение 1-го скриншота -> Переход к Заданию 2
+# 4. Получение 1-го скриншота -> Задание 2 (10 скриншотов)
 @router.message(BotStates.task_one, F.photo)
 async def process_first_screenshot(message: Message, state: FSMContext):
   text = (
-      "Задание 2\n\n"
-      "Оставьте 5 комментариев под видео о подарках или звёздах в TikTok.\n"
-      "Текст: `@bypobot спс за NFT`\n\n"
-      "❤️ Поставьте лайк каждому комментарию.\n"
-      "📸 Отправьте боту 5 скриншотов."
+      "Отлично вы справились с первым заданием\n\n"
+      "Вам надо написать 10 комментариев под любые видео из TikTok "
+      "с текстом лайкая свои комментарии:\n\n"
+      ">Найдите подходящие видео через поиск «тг подарки» или «тг звезды» "
+      "и выберите любые ролики.\n\n"
+      "Текст комментария:\n"
+      ">@ovapobo спс за колечко 💍\n\n"
+      "после чего необходимо отправить ровно 10 скриншотов боту"
   )
-  await message.answer(text)
+  await message.answer_photo(
+      photo="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+      caption=text,
+      parse_mode="Markdown",
+  )
+  await state.update_data(screenshots_count=0)
   await state.set_state(BotStates.task_two)
 
 
-# Получение скриншотов задания 2 -> Финальный этап со спонсорами
+# 5. Сбор 10 скриншотов по одному
 @router.message(BotStates.task_two, F.photo)
-async def process_second_screenshots(message: Message, state: FSMContext):
-  await message.answer("Все изображения приняты!\nПодбираю задания...")
-  await asyncio.sleep(2)
+async def collect_ten_screenshots(message: Message, state: FSMContext):
+  data = await state.get_data()
+  count = data.get("screenshots_count", 0) + 1
+  await state.update_data(screenshots_count=count)
 
-  keyboard = InlineKeyboardMarkup(
-      inline_keyboard=[
-          [
-              InlineKeyboardButton(
-                  text="📢 Подписаться на канал", url="https://t.me/durov"
-              )
-          ],
-          [
-              InlineKeyboardButton(
-                  text="✅ Проверить", callback_data="check_subs"
-              )
-          ],
-      ]
-  )
-  await message.answer(
-      "Отлично! Осталось выполнить задания спонсоров.\n\n"
-      "После подписки нажмите кнопку\n✅ Проверить",
-      reply_markup=keyboard,
-  )
-  await state.set_state(BotStates.checking_subs)
+  remaining = 10 - count
+
+  if count < 10:
+    await message.answer(
+        f"Принято {count} из 10 скриншотов. Осталось: {remaining}."
+    )
+  else:
+    await message.answer(
+        "✅ Все 10 изображений приняты!\nПодбираю задания..."
+    )
+    await asyncio.sleep(2)
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📢 Подписаться на канал", url="https://t.me/durov"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Проверить", callback_data="check_subs"
+                )
+            ],
+        ]
+    )
+    await message.answer(
+        "Отлично! Осталось выполнить задания спонсоров.\n\n"
+        "После подписки нажмите кнопку\n✅ Проверить",
+        reply_markup=keyboard,
+    )
+    await state.set_state(BotStates.checking_subs)
 
 
 @router.callback_query(BotStates.checking_subs, F.data == "check_subs")
 async def final_check(callback: CallbackQuery):
-  await callback.answer(
-      "✅ Подписка проверена!",
-      show_alert=True,
-  )
+  await callback.answer("✅ Подписка проверена!", show_alert=True)
 
 
-# Веб-сервер для удержания Render
+# Веб-сервер для удержания Render (Free Web Service)
 def run_web_server():
   port = int(os.environ.get("PORT", 10000))
   handler = http.server.SimpleHTTPRequestHandler
