@@ -14,8 +14,8 @@ from aiogram.types import (
     Message,
 )
 
-# Твой токен встроен
-TOKEN = "8654427408:AAFwlzh0EaKmJkmtZsQ-ZhERHtXqKd8725c"
+# Твой новый токен
+TOKEN = "8654427408:AAG_vGFYQJ2ozaBhJ4FPCEL3Cgd-ajdJB6g"
 
 router = Router()
 
